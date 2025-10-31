@@ -323,4 +323,4 @@ A: Both if possible, but iOS simulator is usually easier to set up and record.
 
 ---
 
-Ready to submit? Email your repository link and demo video to **careers@belong.app** with the subject: "React Native Assessment - [Your Name]"
+Ready to submit? Email your repository link and demo video to **careers@getbelong.app** with the subject: "React Native Assessment - [Your Name]"

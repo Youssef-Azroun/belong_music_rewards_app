@@ -14,7 +14,7 @@ We're a passionate, music-loving team redefining fandom and fintech. If you're e
 
 ## We're Always Looking for Exceptional Talent
 
-At Belong, innovation thrives on diverse, driven individuals who share our vision. We're a mix of Stockholm, and remote team (with a preference for EU/US time zones) that's always open to top talent in engineering, product, design, and beyond. If you have a high sense of ownership, thrive in a fast-paced startup, and want your ideas to directly shape a product impacting millions of music fans, reach out. Even if a role isn't listed, send your resume and a note on why you'd fit to careers[at] belong.app—we review every application thoughtfully.
+At Belong, innovation thrives on diverse, driven individuals who share our vision. We're a mix of Stockholm, and remote team (with a preference for EU/US time zones) that's always open to top talent in engineering, product, design, and beyond. If you have a high sense of ownership, thrive in a fast-paced startup, and want your ideas to directly shape a product impacting millions of music fans, reach out. Even if a role isn't listed, send your resume and a note on why you'd fit to careers[at] getbelong.app—we review every application thoughtfully.
 
 ## About This Repository
 
@@ -60,7 +60,7 @@ Belong is transforming the music industry by bridging artists and their true fan
 - Dream Team: Join a passionate, music-loving team building something extraordinary.  
 - Key Role: Your work and ideas will directly shape the product and user experience.  
 
-To apply, email your resume, GitHub/portfolio, and a brief note on why you're excited about Belong to careers@belong.app. Reference the React Native tasks in this repo for your application.
+To apply, email your resume, GitHub/portfolio, and a brief note on why you're excited about Belong to careers@getbelong.app. Reference the React Native tasks in this repo for your application.
 
 ### $${\color{green}🚀 \space Frontend \space React \space Developer \space Developer}$$
 
@@ -88,7 +88,7 @@ We're seeking a talented Frontend React Developer to craft intuitive, pixel-perf
 **What We Offer**  
 Same as above—fully remote, impactful role, and a collaborative team. Your contributions will directly enhance how fans interact with Belong's rewards and persona features.
 
-Apply to careers@belong.app with your resume, portfolio, and references to frontend tasks in this repo.
+Apply to careers@getbelong.app with your resume, portfolio, and references to frontend tasks in this repo.
 
 ### $${\color{green}🚀 \space Backend \space Developer \space (Node.js/TypeScript)}$$
 
@@ -118,7 +118,7 @@ We're looking for a Backend Developer to scale our robust API that powers Belong
 **What We Offer**  
 Fully remote, meaningful impact, and direct influence on Belong's architecture as we grow.
 
-Apply to careers@belong.app with your resume, GitHub, and references to backend tasks in this repo.
+Apply to careers@getbelong.app with your resume, GitHub, and references to backend tasks in this repo.
 
 
 

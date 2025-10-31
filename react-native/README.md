@@ -615,6 +615,6 @@ react-native/
 ```
 
 ### 🆘 **Support:**
-Questions during development? Email **careers@belong.app** - we want you to succeed!
+Questions during development? Email **careers@bgetelong.app** - we want you to succeed!
 
 $${\color{purple}Good \space luck \space building \space the \space future \space of \space fandom! \space 🚀🎵}$$
