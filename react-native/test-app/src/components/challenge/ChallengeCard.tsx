@@ -1,9 +1,15 @@
 // ChallengeCard component - Individual challenge display
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Animated } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 import { GlassCard, GlassButton } from '../ui/GlassCard';
 import { THEME } from '../../constants/theme';
 import type { MusicChallenge } from '../../types';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+// Card width will be determined by parent container in carousel mode
+const CARD_WIDTH = SCREEN_WIDTH - (THEME.spacing.md * 4);
 
 interface ChallengeCardProps {
   challenge: MusicChallenge;
@@ -18,6 +24,53 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
   isCurrentTrack = false,
   isPlaying = false,
 }) => {
+  // Animated values for game-like effects
+  const glowAnimation = useRef(new Animated.Value(0)).current;
+  const shimmerAnimation = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (isCurrentTrack) {
+      // Glow animation
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(glowAnimation, {
+            toValue: 1,
+            duration: 1500,
+            useNativeDriver: false,
+          }),
+          Animated.timing(glowAnimation, {
+            toValue: 0,
+            duration: 1500,
+            useNativeDriver: false,
+          }),
+        ])
+      ).start();
+
+      // Shimmer effect
+      Animated.loop(
+        Animated.timing(shimmerAnimation, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: false,
+        })
+      ).start();
+    } else {
+      // Reset animations when not current track
+      glowAnimation.setValue(0);
+      shimmerAnimation.setValue(0);
+    }
+  }, [isCurrentTrack]);
+
+  const glowOpacity = glowAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.4, 0.9],
+  });
+
+  const shimmerTranslateX = shimmerAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-200, 200],
+  });
+
   const formatDuration = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
@@ -40,155 +93,427 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
     return 'Play Challenge';
   };
 
+  const handleCardPress = () => {
+    router.push({
+      pathname: '/(modals)/challenge-detail' as any,
+      params: { challengeId: challenge.id },
+    });
+  };
+
   return (
-    <GlassCard
-      style={StyleSheet.flatten([
-        styles.card,
-        isCurrentTrack && styles.currentTrackCard
-      ])}
-      gradientColors={
-        isCurrentTrack
-          ? THEME.glass.gradientColors.primary
-          : THEME.glass.gradientColors.card
-      }
-    >
-      <View style={styles.header}>
-        <View style={styles.titleSection}>
-          <Text style={styles.title}>{challenge.title}</Text>
-          <Text style={styles.artist}>{challenge.artist}</Text>
-        </View>
-        <View style={StyleSheet.flatten([
-          styles.difficultyBadge,
-          { backgroundColor: getDifficultyColor(challenge.difficulty) }
-        ])}>
-          <Text style={styles.difficultyText}>
-            {challenge.difficulty.toUpperCase()}
-          </Text>
-        </View>
-      </View>
+    <View style={styles.cardWrapper}>
+      <GlassCard
+          key={`${challenge.id}-${isCurrentTrack}`}
+          style={StyleSheet.flatten([
+            styles.card,
+            isCurrentTrack && styles.currentTrackCard,
+            { opacity: 1 } // Explicitly ensure visibility
+          ])}
+          gradientColors={
+            isCurrentTrack
+              ? ['rgba(252, 190, 37, 0.7)', 'rgba(117, 83, 219, 0.5)']
+              : THEME.glass.gradientColors.card
+          }
+          borderRadius={THEME.borderRadius.lg}
+        >
+          {/* Animated glow effect for highlighted card - inside card */}
+          {isCurrentTrack && (
+            <Animated.View
+              style={[
+                styles.glowContainer,
+                {
+                  opacity: glowOpacity,
+                },
+              ]}
+              pointerEvents="none"
+            >
+              <LinearGradient
+                colors={[
+                  'rgba(252, 190, 37, 0.2)',
+                  'rgba(117, 83, 219, 0.15)',
+                  'rgba(252, 190, 37, 0.2)',
+                ]}
+                style={styles.glowGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              />
+            </Animated.View>
+          )}
 
-      <Text style={styles.description} numberOfLines={2}>
-        {challenge.description}
-      </Text>
+          {/* Corner decorations for game-like UI - inside card */}
+          {isCurrentTrack && (
+            <>
+              <View style={[styles.cornerDecoration, styles.topLeft]} />
+              <View style={[styles.cornerDecoration, styles.topRight]} />
+              <View style={[styles.cornerDecoration, styles.bottomLeft]} />
+              <View style={[styles.cornerDecoration, styles.bottomRight]} />
+            </>
+          )}
 
-      <View style={styles.infoRow}>
-        <View style={styles.infoItem}>
-          <Text style={styles.infoLabel}>Duration</Text>
-          <Text style={styles.infoValue}>{formatDuration(challenge.duration)}</Text>
-        </View>
-        <View style={styles.infoItem}>
-          <Text style={styles.infoLabel}>Points</Text>
-          <Text style={[styles.infoValue, { color: THEME.colors.accent }]}> 
-            {challenge.points}
-          </Text>
-        </View>
-        <View style={styles.infoItem}>
-          <Text style={styles.infoLabel}>Progress</Text>
-          <Text style={styles.infoValue}>{Math.round(challenge.progress)}%</Text>
-        </View>
-      </View>
+          {/* Shimmer effect overlay */}
+          {isCurrentTrack && (
+            <Animated.View
+              style={[
+                styles.shimmerOverlay,
+                {
+                  transform: [{ translateX: shimmerTranslateX }],
+                },
+              ]}
+              pointerEvents="none"
+            >
+              <LinearGradient
+                colors={[
+                  'transparent',
+                  'rgba(255, 255, 255, 0.2)',
+                  'transparent',
+                ]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+            </Animated.View>
+          )}
+        <View style={styles.cardContent}>
+          <TouchableOpacity 
+            onPress={handleCardPress} 
+            activeOpacity={0.7} 
+            style={styles.cardPressArea}
+          >
+            {/* Header Section */}
+            <View style={styles.header}>
+              <View style={styles.titleSection}>
+                <Text style={[
+                  styles.title,
+                  isCurrentTrack && styles.activeTitle
+                ]}>
+                  {challenge.title}
+                </Text>
+                <Text style={styles.artist}>{challenge.artist}</Text>
+              </View>
+              <View style={StyleSheet.flatten([
+                styles.difficultyBadge,
+                { backgroundColor: getDifficultyColor(challenge.difficulty) }
+              ])}>
+                <Text style={styles.difficultyText}>
+                  {challenge.difficulty.toUpperCase()}
+                </Text>
+              </View>
+            </View>
 
-      {challenge.progress > 0 && (
-        <View style={styles.progressContainer}>
-          <View style={styles.progressTrack}>
-            <View
-              style={StyleSheet.flatten([
-                styles.progressFill,
-                { width: `${challenge.progress}%` }
-              ])}
+            {/* Description */}
+            <Text style={styles.description} numberOfLines={2}>
+              {challenge.description}
+            </Text>
+
+            {/* Game Stats Grid */}
+            <View style={styles.gameStatsGrid}>
+              <View style={styles.gameStatCard}>
+                <View style={styles.gameStatIconBox}>
+                  <Text style={styles.gameStatIcon}>⏱</Text>
+                </View>
+                <Text style={styles.gameStatValue}>{formatDuration(challenge.duration)}</Text>
+                <Text style={styles.gameStatLabel}>TIME</Text>
+              </View>
+              
+              <View style={styles.gameStatCard}>
+                <View style={[styles.gameStatIconBox, styles.rewardBox]}>
+                  <Text style={styles.gameStatIcon}>⭐</Text>
+                </View>
+                <Text style={[styles.gameStatValue, styles.rewardValue]}>
+                  {challenge.points}
+                </Text>
+                <Text style={styles.gameStatLabel}>REWARD</Text>
+              </View>
+              
+              <View style={styles.gameStatCard}>
+                <View style={styles.gameStatIconBox}>
+                  <Text style={styles.gameStatIcon}>📊</Text>
+                </View>
+                <Text style={styles.gameStatValue}>{Math.round(challenge.progress)}%</Text>
+                <Text style={styles.gameStatLabel}>DONE</Text>
+              </View>
+            </View>
+
+            {/* Game-style Progress Bar */}
+            {challenge.progress > 0 && (
+              <View style={styles.gameProgressContainer}>
+                <View style={styles.gameProgressTrack}>
+                  <View
+                    style={StyleSheet.flatten([
+                      styles.gameProgressFill,
+                      { width: `${challenge.progress}%` }
+                    ])}
+                  />
+                  <View style={styles.progressGlow} />
+                </View>
+                <Text style={styles.progressText}>{Math.round(challenge.progress)}% COMPLETE</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* Play Button */}
+          <View style={styles.buttonContainer}>
+            <GlassButton
+              title={getButtonTitle()}
+              onPress={() => onPlay(challenge)}
+              variant={isCurrentTrack ? 'primary' : 'secondary'}
+              disabled={challenge.completed}
+              style={styles.playButton}
             />
           </View>
         </View>
-      )}
-
-      <GlassButton
-        title={getButtonTitle()}
-        onPress={() => onPlay(challenge)}
-        variant={isCurrentTrack ? 'primary' : 'secondary'}
-        disabled={challenge.completed}
-        style={styles.playButton}
-      />
-    </GlassCard>
+      </GlassCard>
+    </View>
   );
 };
 
+ChallengeCard.displayName = 'ChallengeCard';
+
 const styles = StyleSheet.create({
+  cardWrapper: {
+    width: '100%',
+    alignSelf: 'stretch', // Make sure it takes full available width
+    opacity: 1, // Explicitly ensure visibility
+    position: 'relative', // Needed for absolute positioned glow and corners
+    paddingVertical: 8, // Add padding to prevent pulse clipping
+    marginVertical: -8, // Negative margin to maintain spacing
+  },
   card: {
-    marginBottom: THEME.spacing.md,
+    width: '100%',
+    overflow: 'hidden',
   },
   currentTrackCard: {
+    borderWidth: 3,
+    borderColor: THEME.colors.accent,
+    shadowColor: 'rgba(0, 0, 0, 0.3)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 15,
+    elevation: 12,
+  },
+  glowContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: THEME.borderRadius.lg,
+    zIndex: 0,
+  },
+  glowGradient: {
+    flex: 1,
+    borderRadius: THEME.borderRadius.lg,
+  },
+  cornerDecoration: {
+    position: 'absolute',
+    width: 20,
+    height: 20,
     borderWidth: 2,
-    borderColor: THEME.colors.primary,
+    borderColor: THEME.colors.accent,
+    zIndex: 100,
+  },
+  topLeft: {
+    top: 4,
+    left: 4,
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
+    borderTopLeftRadius: 8,
+  },
+  topRight: {
+    top: 4,
+    right: 4,
+    borderLeftWidth: 0,
+    borderBottomWidth: 0,
+    borderTopRightRadius: 8,
+  },
+  bottomLeft: {
+    bottom: 4,
+    left: 4,
+    borderRightWidth: 0,
+    borderTopWidth: 0,
+    borderBottomLeftRadius: 8,
+  },
+  bottomRight: {
+    bottom: 4,
+    right: 4,
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
+    borderBottomRightRadius: 8,
+  },
+  shimmerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: -100,
+    width: 100,
+    bottom: 0,
+    borderRadius: THEME.borderRadius.lg,
+    zIndex: 1,
+    overflow: 'hidden',
+  },
+  cardContent: {
+    padding: THEME.spacing.lg,
+  },
+  cardPressArea: {
+    flex: 1,
+    marginBottom: THEME.spacing.md,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: THEME.spacing.sm,
+    marginBottom: THEME.spacing.md,
   },
   titleSection: {
     flex: 1,
-    marginRight: THEME.spacing.sm,
+    marginRight: THEME.spacing.md,
   },
   title: {
-    fontSize: THEME.fonts.sizes.lg,
-    fontWeight: 'bold',
+    fontSize: THEME.fonts.sizes.xxl,
+    fontWeight: '900',
     color: THEME.colors.text.primary,
     marginBottom: THEME.spacing.xs,
+    letterSpacing: 1,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  activeTitle: {
+    color: THEME.colors.accent,
+    textShadowColor: 'rgba(252, 190, 37, 0.8)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
   },
   artist: {
     fontSize: THEME.fonts.sizes.md,
     color: THEME.colors.text.secondary,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
   difficultyBadge: {
-    paddingHorizontal: THEME.spacing.sm,
-    paddingVertical: THEME.spacing.xs,
-    borderRadius: THEME.borderRadius.sm,
+    paddingHorizontal: THEME.spacing.md,
+    paddingVertical: THEME.spacing.sm,
+    borderRadius: 8,
+    minWidth: 80,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+    shadowColor: THEME.colors.accent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    elevation: 5,
   },
   difficultyText: {
     fontSize: THEME.fonts.sizes.xs,
-    fontWeight: 'bold',
+    fontWeight: '900',
     color: THEME.colors.background,
+    letterSpacing: 2,
   },
   description: {
     fontSize: THEME.fonts.sizes.sm,
-    color: THEME.colors.text.tertiary,
-    lineHeight: 20,
-    marginBottom: THEME.spacing.md,
+    color: THEME.colors.text.secondary,
+    lineHeight: 22,
+    marginBottom: THEME.spacing.lg,
   },
-  infoRow: {
+  gameStatsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: THEME.spacing.md,
   },
-  infoItem: {
+  gameStatCard: {
+    flex: 1,
     alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    borderRadius: THEME.borderRadius.sm,
+    padding: THEME.spacing.md,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    marginHorizontal: THEME.spacing.xs / 2,
   },
-  infoLabel: {
-    fontSize: THEME.fonts.sizes.xs,
-    color: THEME.colors.text.tertiary,
-    marginBottom: THEME.spacing.xs,
+  gameStatIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: THEME.spacing.sm,
   },
-  infoValue: {
-    fontSize: THEME.fonts.sizes.sm,
-    fontWeight: '600',
+  rewardBox: {
+    backgroundColor: 'rgba(252, 190, 37, 0.3)',
+    borderColor: THEME.colors.accent,
+  },
+  gameStatIcon: {
+    fontSize: 24,
+  },
+  gameStatValue: {
+    fontSize: THEME.fonts.sizes.lg,
+    fontWeight: '900',
     color: THEME.colors.text.primary,
+    marginBottom: THEME.spacing.xs / 2,
+    letterSpacing: 0.5,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
-  progressContainer: {
+  rewardValue: {
+    color: THEME.colors.accent,
+    textShadowColor: 'rgba(252, 190, 37, 0.8)',
+    textShadowRadius: 5,
+  },
+  gameStatLabel: {
+    fontSize: THEME.fonts.sizes.xs,
+    color: THEME.colors.text.secondary,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    fontWeight: '700',
+  },
+  gameProgressContainer: {
     marginBottom: THEME.spacing.md,
   },
-  progressTrack: {
-    height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 2,
+  gameProgressTrack: {
+    height: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 5,
     overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    position: 'relative',
   },
-  progressFill: {
+  gameProgressFill: {
     height: '100%',
     backgroundColor: THEME.colors.accent,
-    borderRadius: 2,
+    borderRadius: 3,
+    shadowColor: THEME.colors.accent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  progressGlow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(252, 190, 37, 0.3)',
+    borderRadius: 3,
+  },
+  progressText: {
+    fontSize: THEME.fonts.sizes.xs,
+    color: THEME.colors.accent,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginTop: THEME.spacing.xs,
+    textAlign: 'center',
+    textTransform: 'uppercase',
+  },
+  buttonContainer: {
+    marginTop: THEME.spacing.xs,
   },
   playButton: {
-    marginTop: THEME.spacing.sm,
+    marginTop: 0,
   },
 });

@@ -1,24 +1,19 @@
 // Audio service - TrackPlayer setup and configuration
-import TrackPlayer, { Capability, AppKilledPlaybackBehavior } from 'react-native-track-player';
+// TrackPlayer service setup
+import TrackPlayer, { 
+  Capability, 
+  State, 
+  Event,
+  useTrackPlayerEvents,
+  useProgress,
+  usePlaybackState 
+} from 'react-native-track-player';
 
-// TrackPlayer service setup - call this in your App.tsx or _layout.tsx
+// Initialize TrackPlayer with capabilities - matching exact specification
 export const setupTrackPlayer = async (): Promise<void> => {
   try {
-    // Check if player is already initialized
-    const isSetup = await TrackPlayer.isServiceRunning();
-    if (isSetup) {
-      return;
-    }
-
-    // Setup the player with proper configuration
-    await TrackPlayer.setupPlayer({
-      waitForBuffer: true,
-      maxCacheSize: 1024 * 10, // 10MB
-    });
-
-    // Configure capabilities
+    await TrackPlayer.setupPlayer();
     await TrackPlayer.updateOptions({
-      // Configure which control center / notification controls are shown
       capabilities: [
         Capability.Play,
         Capability.Pause,
@@ -26,31 +21,22 @@ export const setupTrackPlayer = async (): Promise<void> => {
         Capability.SkipToPrevious,
         Capability.SeekTo,
       ],
-
-      // Capabilities that will show up when the notification is in the compact form on Android
-      compactCapabilities: [
-        Capability.Play,
-        Capability.Pause,
-      ],
-
-      // Configure behavior when app is killed
-      android: {
-        appKilledPlaybackBehavior: AppKilledPlaybackBehavior.StopPlaybackAndRemoveNotification,
-      },
-
-      // Configure notification
-      notificationCapabilities: [
-        Capability.Play,
-        Capability.Pause,
-      ],
     });
-
-    console.log('TrackPlayer setup complete');
   } catch (error) {
     console.error('TrackPlayer setup error:', error);
     throw error;
   }
 };
+
+// Track structure for the provided sample - matching specification
+export interface Track {
+  id: string;
+  url: string; // Local file path to provided .mp3
+  title: string;
+  artist: string;
+  artwork?: string;
+  duration?: number;
+}
 
 // Reset player state
 export const resetPlayer = async (): Promise<void> => {

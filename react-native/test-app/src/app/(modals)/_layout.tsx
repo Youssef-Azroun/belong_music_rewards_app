@@ -11,13 +11,21 @@ export default function ModalLayout() {
         },
         headerTintColor: THEME.colors.text.primary,
         presentation: 'modal',
+        headerShown: false,
       }}
     >
       <Stack.Screen
         name="player"
         options={{
-          title: 'Now Playing',
-          headerBackTitle: 'Close',
+          presentation: 'fullScreenModal',
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="challenge-detail"
+        options={{
+          presentation: 'card',
+          headerShown: false,
         }}
       />
     </Stack>
