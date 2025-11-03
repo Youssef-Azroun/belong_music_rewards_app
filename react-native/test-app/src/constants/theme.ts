@@ -10,7 +10,6 @@ export const THEME = {
     text: {
       primary: '#FFFFFF',
       secondary: 'rgba(255, 255, 255, 0.7)',
-      tertiary: 'rgba(255, 255, 255, 0.5)',
     },
     border: 'rgba(255, 255, 255, 0.2)',
   },
@@ -41,16 +40,16 @@ export const THEME = {
     lg: 24,
   },
   glass: {
-    blurIntensity: 20,
+    blurIntensity: 30,
     gradientColors: {
-      primary: ['rgba(117, 83, 219, 0.3)', 'rgba(117, 83, 219, 0.1)'],
-      secondary: ['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.05)'],
-      card: ['rgba(255, 255, 255, 0.15)', 'rgba(255, 255, 255, 0.05)'],
+      primary: ['rgba(117, 83, 219, 0.6)', 'rgba(117, 83, 219, 0.4)'],
+      secondary: ['rgba(255, 255, 255, 0.25)', 'rgba(255, 255, 255, 0.15)'],
+      card: ['rgba(255, 255, 255, 0.35)', 'rgba(255, 255, 255, 0.2)'],
     }
   }
 };
 
-// Sample challenge data with actual Belong tracks
+// Sample challenge data structure using provided Belong tracks
 export const SAMPLE_CHALLENGES = [
   {
     id: 'challenge-1',
@@ -73,6 +72,18 @@ export const SAMPLE_CHALLENGES = [
     audioUrl: 'https://belong-dev-public2.s3.us-east-1.amazonaws.com/misc/New-Forms-Roni+Size.mp3',
     description: 'Complete this legendary track for bonus points',
     difficulty: 'medium' as const,
+    completed: false,
+    progress: 0,
+  },
+  {
+    id: 'challenge-3',
+    title: 'Bonus Challenge',
+    artist: 'Camo & Krooked',
+    duration: 219, // 3:39 (same track as challenge 1)
+    points: 250,
+    audioUrl: 'https://belong-dev-public2.s3.us-east-1.amazonaws.com/misc/Camo-Krooked-All-Night.mp3',
+    description: 'Listen again for extra points - test repeat functionality',
+    difficulty: 'hard' as const,
     completed: false,
     progress: 0,
   },

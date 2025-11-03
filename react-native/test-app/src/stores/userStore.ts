@@ -50,6 +50,10 @@ export const useUserStore = create<UserStore>()(
   )
 );
 
-// Selector functions
+// Selector functions following Belong's pattern: useStore(s => s.specificProperty)
+// These can be used with: useUserStore(selectTotalPoints) 
+// Or inline: useUserStore((s) => s.totalPoints)
 export const selectTotalPoints = (state: UserStore) => state.totalPoints;
 export const selectCompletedChallenges = (state: UserStore) => state.completedChallenges;
+export const selectAddPoints = (state: UserStore) => state.addPoints;
+export const selectCompleteChallenge = (state: UserStore) => state.completeChallenge;

@@ -12,11 +12,13 @@ interface MusicStore {
   isPlaying: boolean;
   currentPosition: number;
   
-  // Actions
+  // Actions - Public API matching required interface
   loadChallenges: () => void;
   setCurrentTrack: (track: MusicChallenge) => void;
   updateProgress: (challengeId: string, progress: number) => void;
   markChallengeComplete: (challengeId: string) => void;
+  
+  // Internal helpers (used by hooks but not exposed in interface)
   setIsPlaying: (playing: boolean) => void;
   setCurrentPosition: (position: number) => void;
 }
@@ -83,7 +85,14 @@ export const useMusicStore = create<MusicStore>()(
   )
 );
 
-// Selector functions for performance
+// Selector functions following Belong's pattern: useStore(s => s.specificProperty)
+// These can be used with: useMusicStore(selectChallenges)
+// Or inline: useMusicStore((s) => s.challenges)
+export const selectChallenges = (state: MusicStore) => state.challenges;
 export const selectCurrentTrack = (state: MusicStore) => state.currentTrack;
 export const selectIsPlaying = (state: MusicStore) => state.isPlaying;
-export const selectChallenges = (state: MusicStore) => state.challenges;
+export const selectCurrentPosition = (state: MusicStore) => state.currentPosition;
+export const selectLoadChallenges = (state: MusicStore) => state.loadChallenges;
+export const selectSetCurrentTrack = (state: MusicStore) => state.setCurrentTrack;
+export const selectUpdateProgress = (state: MusicStore) => state.updateProgress;
+export const selectMarkChallengeComplete = (state: MusicStore) => state.markChallengeComplete;

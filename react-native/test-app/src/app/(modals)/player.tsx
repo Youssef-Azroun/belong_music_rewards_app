@@ -1,4 +1,4 @@
-// Player modal - Full-screen audio player (Expo Router modal)
+// Player modal - Modern full-screen audio player
 import React from 'react';
 import { 
   View, 
@@ -6,11 +6,22 @@ import {
   StyleSheet, 
   TouchableOpacity,
   SafeAreaView,
-  Alert
+  Alert,
+  StatusBar,
+  Platform,
+  Dimensions
 } from 'react-native';
-import { GlassCard, GlassButton } from '../../components/ui/GlassCard';
+import { router } from 'expo-router';
+import { GlassCard } from '../../components/ui/GlassCard';
+import { GradientBackground } from '../../components/ui/GradientBackground';
+import { CompletionModal } from '../../components/ui/CompletionModal';
 import { useMusicPlayer } from '../../hooks/useMusicPlayer';
+import { useUserStore } from '../../stores/userStore';
 import { THEME } from '../../constants/theme';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function PlayerModal() {
   const { 
@@ -18,13 +29,49 @@ export default function PlayerModal() {
     isPlaying, 
     currentPosition, 
     duration, 
-    play, 
     pause, 
-    resume, 
+    resume,
     seekTo,
     loading,
-    error 
+    error,
+    isCompleted,
+    resetCompletion
   } = useMusicPlayer();
+  
+  const totalPoints = useUserStore((state) => state.totalPoints);
+  const [showCompletionModal, setShowCompletionModal] = React.useState(false);
+  const modalShownRef = React.useRef<string | null>(null);
+
+  // Show completion modal when song finishes - only once per track
+  React.useEffect(() => {
+    if (isCompleted && currentTrack) {
+      // Only show if we haven't already shown it for this track
+      if (modalShownRef.current !== currentTrack.id) {
+        modalShownRef.current = currentTrack.id;
+        setShowCompletionModal(true);
+      }
+    }
+  }, [isCompleted, currentTrack]);
+
+  // Reset modal tracking when track changes
+  React.useEffect(() => {
+    if (currentTrack) {
+      // If this is a different track, reset the modal shown flag
+      if (modalShownRef.current !== currentTrack.id) {
+        modalShownRef.current = null;
+        setShowCompletionModal(false);
+      }
+    } else {
+      modalShownRef.current = null;
+      setShowCompletionModal(false);
+    }
+  }, [currentTrack?.id]);
+
+  const handleCloseCompletionModal = () => {
+    setShowCompletionModal(false);
+    // Don't reset completion here - let the ref prevent it from showing again
+    // The completion state will reset when a new track starts
+  };
 
   const formatTime = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
@@ -37,12 +84,6 @@ export default function PlayerModal() {
     return (currentPosition / duration) * 100;
   };
 
-  const handleSeek = (percentage: number) => {
-    if (duration) {
-      const newPosition = (percentage / 100) * duration;
-      seekTo(newPosition);
-    }
-  };
 
   const handlePlayPause = async () => {
     if (isPlaying) {
@@ -54,263 +95,522 @@ export default function PlayerModal() {
     }
   };
 
+  const handleBackward = () => {
+    if (duration) {
+      // Prevent rewinding if song has reached 100% completion
+      const progress = getProgress();
+      if (progress >= 100) {
+        return;
+      }
+      const newPosition = Math.max(0, currentPosition - 10);
+      seekTo(newPosition);
+    }
+  };
+
+  const handleForward = () => {
+    if (duration) {
+      const newPosition = Math.min(duration, currentPosition + 10);
+      seekTo(newPosition);
+    }
+  };
+
   if (error) {
     Alert.alert('Playback Error', error);
   }
 
   if (!currentTrack) {
     return (
-      <SafeAreaView style={styles.container}>
-        <GlassCard style={styles.noTrackCard}>
-          <Text style={styles.noTrackText}>No track selected</Text>
-          <Text style={styles.noTrackSubtext}>
-            Go back and select a challenge to start playing music
-          </Text>
-        </GlassCard>
-      </SafeAreaView>
+      <GradientBackground style={styles.container}>
+        <StatusBar barStyle="light-content" />
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyIcon}>🎵</Text>
+            <Text style={styles.emptyTitle}>No Track Selected</Text>
+            <TouchableOpacity 
+              style={styles.emptyButton}
+              onPress={() => router.back()}
+            >
+              <Text style={styles.emptyButtonText}>Go Back</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </GradientBackground>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        {/* Track Info */}
-        <GlassCard style={styles.trackInfoCard}>
-          <Text style={styles.trackTitle}>{currentTrack.title}</Text>
-          <Text style={styles.trackArtist}>{currentTrack.artist}</Text>
-          <Text style={styles.trackDescription}>{currentTrack.description}</Text>
-          
-          <View style={styles.pointsContainer}>
-            <Text style={styles.pointsLabel}>Challenge Points</Text>
-            <Text style={styles.pointsValue}>{currentTrack.points}</Text>
-          </View>
-        </GlassCard>
-
-        {/* Progress Section */}
-        <GlassCard style={styles.progressCard}>
-          <Text style={styles.progressLabel}>Listening Progress</Text>
-          
-          {/* Progress Bar */}
+    <GradientBackground style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      <SafeAreaView style={styles.safeArea}>
+        {/* Header */}
+        <View style={styles.header}>
           <TouchableOpacity 
-            style={styles.progressTrack}
-            onPress={(event) => {
-              const { locationX, width } = event.nativeEvent as any;
-              const percentage = (locationX / width) * 100;
-              handleSeek(percentage);
-            }}
+            onPress={() => router.back()} 
+            style={styles.closeButton}
+            activeOpacity={0.8}
           >
-            <View style={styles.progressBackground}>
-              <View 
-                style={[
-                  styles.progressFill,
-                  { width: `${getProgress()}%` }
-                ]} 
-              />
+            <View style={styles.closeButtonInner}>
+              <Text style={styles.closeIcon}>◄</Text>
+              <Text style={styles.closeText}>BACK</Text>
             </View>
           </TouchableOpacity>
+        </View>
 
-          {/* Time Display */}
-          <View style={styles.timeContainer}>
-            <Text style={styles.timeText}>{formatTime(currentPosition)}</Text>
-            <Text style={styles.timeText}>{formatTime(duration)}</Text>
+        <View style={styles.content}>
+          {/* Track Info - Minimal & Modern */}
+          <View style={styles.trackSection}>
+            <View style={styles.trackArtwork}>
+              <Text style={styles.trackArtworkIcon}>🎵</Text>
+            </View>
+            <Text style={styles.trackTitle}>{currentTrack.title}</Text>
+            <Text style={styles.trackArtist}>{currentTrack.artist}</Text>
+            
+            {/* Quick Stats */}
+            <View style={styles.quickStats}>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>
+                  {isCompleted ? currentTrack.points : 0}
+                </Text>
+                <Text style={styles.statLabel}>Points</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{totalPoints}</Text>
+                <Text style={styles.statLabel}>Total</Text>
+              </View>
+            </View>
           </View>
 
-          {/* Progress Percentage */}
-          <Text style={styles.progressPercentage}>
-            {Math.round(getProgress())}% Complete
-          </Text>
-        </GlassCard>
-
-        {/* Controls */}
-        <GlassCard style={styles.controlsCard}>
-          <View style={styles.controlsRow}>
-            <GlassButton
-              title="⏪ -10s"
-              onPress={() => handleSeek(Math.max(0, getProgress() - (10 / duration) * 100))}
-              variant="secondary"
-              style={styles.controlButton}
-            />
+          {/* Progress Section */}
+          <View style={styles.progressSection}>
+            <View style={styles.progressBarContainer}>
+              <View style={styles.progressBarTrack}>
+                <View 
+                  style={[
+                    styles.progressBarFill,
+                    { width: `${getProgress()}%` }
+                  ]} 
+                />
+              </View>
+            </View>
             
-            <GlassButton
-              title={loading ? "..." : isPlaying ? "⏸️ Pause" : "▶️ Play"}
+            <View style={styles.timeRow}>
+              <Text style={styles.timeText}>{formatTime(currentPosition)}</Text>
+              <Text style={styles.progressPercent}>{Math.round(getProgress())}%</Text>
+              <Text style={styles.timeText}>{formatTime(duration)}</Text>
+            </View>
+          </View>
+
+          {/* Controls */}
+          <View style={styles.controlsSection}>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={handleBackward}
+              activeOpacity={0.7}
+            >
+              <LinearGradient
+                colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.06)']}
+                style={styles.secondaryButtonGradient}
+              >
+                <View style={styles.secondaryButtonInner}>
+                  <View style={styles.skipIcons}>
+                    <View style={styles.skipIconLeft} />
+                    <View style={[styles.skipIconLeft, styles.skipIconLeftSecond]} />
+                  </View>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.playButton}
               onPress={handlePlayPause}
-              variant="primary"
-              style={styles.mainControlButton}
-              loading={loading}
-            />
-            
-            <GlassButton
-              title="⏩ +10s"
-              onPress={() => handleSeek(Math.min(100, getProgress() + (10 / duration) * 100))}
-              variant="secondary"
-              style={styles.controlButton}
-            />
-          </View>
+              activeOpacity={0.8}
+              disabled={loading}
+            >
+              <LinearGradient
+                colors={[THEME.colors.accent, 'rgba(252, 190, 37, 0.85)']}
+                style={styles.playButtonGradient}
+              >
+                <View style={styles.playButtonContent}>
+                  {loading ? (
+                    <Text style={styles.playButtonIcon}>⏳</Text>
+                  ) : isPlaying ? (
+                    <View style={styles.pauseIcons}>
+                      <View style={styles.pauseBar} />
+                      <View style={styles.pauseBar} />
+                    </View>
+                  ) : (
+                    <View style={styles.playIcon} />
+                  )}
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
 
-          {error && (
-            <Text style={styles.errorText}>{error}</Text>
-          )}
-        </GlassCard>
-
-        {/* Challenge Progress */}
-        <GlassCard style={styles.challengeCard}>
-          <Text style={styles.challengeLabel}>Challenge Status</Text>
-          <View style={styles.challengeInfo}>
-            <Text style={[
-              styles.challengeStatus,
-              { color: currentTrack.completed ? THEME.colors.secondary : THEME.colors.accent }
-            ]}>
-              {currentTrack.completed ? '✅ Completed' : '🎧 In Progress'}
-            </Text>
-            <Text style={styles.challengeProgress}>
-              {Math.round(currentTrack.progress)}% of challenge complete
-            </Text>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={handleForward}
+              activeOpacity={0.7}
+            >
+              <LinearGradient
+                colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.06)']}
+                style={styles.secondaryButtonGradient}
+              >
+                <View style={styles.secondaryButtonInner}>
+                  <View style={styles.skipIcons}>
+                    <View style={styles.skipIconRight} />
+                    <View style={[styles.skipIconRight, styles.skipIconRightSecond]} />
+                  </View>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
-        </GlassCard>
-      </View>
-    </SafeAreaView>
+        </View>
+      </SafeAreaView>
+
+      {/* Completion Modal */}
+      {currentTrack && (
+        <CompletionModal
+          visible={showCompletionModal}
+          points={currentTrack.points}
+          trackTitle={currentTrack.title}
+          trackArtist={currentTrack.artist}
+          onClose={handleCloseCompletionModal}
+        />
+      )}
+    </GradientBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.colors.background,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  header: {
+    paddingLeft: THEME.spacing.xs,
+    paddingRight: THEME.spacing.md,
+    paddingTop: Platform.OS === 'ios' ? 35 : 45,
+    paddingBottom: THEME.spacing.sm,
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+  },
+  closeButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButtonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: THEME.spacing.sm,
+    paddingHorizontal: THEME.spacing.md,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    borderWidth: 2,
+    borderColor: THEME.colors.accent,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  closeIconGlow: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(252, 190, 37, 0.2)',
+    opacity: 0.5,
+  },
+  closeIcon: {
+    fontSize: 20,
+    color: THEME.colors.accent,
+    fontWeight: '900',
+    marginRight: THEME.spacing.xs,
+    textShadowColor: 'rgba(252, 190, 37, 0.8)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
+  },
+  closeText: {
+    fontSize: THEME.fonts.sizes.sm,
+    color: THEME.colors.accent,
+    fontWeight: '900',
+    letterSpacing: 2,
+    textShadowColor: 'rgba(252, 190, 37, 0.8)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
   content: {
     flex: 1,
-    padding: THEME.spacing.lg,
-    justifyContent: 'space-between',
+    paddingHorizontal: THEME.spacing.lg,
+    paddingTop: THEME.spacing.md,
+    justifyContent: 'center',
   },
-  noTrackCard: {
-    margin: THEME.spacing.xl,
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: THEME.spacing.xl,
   },
-  noTrackText: {
+  emptyIcon: {
+    fontSize: 80,
+    marginBottom: THEME.spacing.lg,
+    opacity: 0.6,
+  },
+  emptyTitle: {
     fontSize: THEME.fonts.sizes.xl,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: THEME.colors.text.primary,
-    marginBottom: THEME.spacing.sm,
-  },
-  noTrackSubtext: {
-    fontSize: THEME.fonts.sizes.md,
-    color: THEME.colors.text.secondary,
+    marginBottom: THEME.spacing.xl,
     textAlign: 'center',
   },
-  trackInfoCard: {
+  emptyButton: {
+    paddingVertical: THEME.spacing.md,
+    paddingHorizontal: THEME.spacing.xl,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  emptyButtonText: {
+    fontSize: THEME.fonts.sizes.md,
+    fontWeight: '700',
+    color: THEME.colors.text.primary,
+  },
+  trackSection: {
     alignItems: 'center',
+    paddingVertical: THEME.spacing.sm,
+  },
+  trackArtwork: {
+    width: 160,
+    height: 160,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: THEME.spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  trackArtworkIcon: {
+    fontSize: 60,
   },
   trackTitle: {
-    fontSize: THEME.fonts.sizes.xxl,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '800',
     color: THEME.colors.text.primary,
     textAlign: 'center',
     marginBottom: THEME.spacing.xs,
+    letterSpacing: 0.5,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
   },
   trackArtist: {
-    fontSize: THEME.fonts.sizes.lg,
+    fontSize: 16,
     color: THEME.colors.text.secondary,
-    marginBottom: THEME.spacing.md,
-  },
-  trackDescription: {
-    fontSize: THEME.fonts.sizes.sm,
-    color: THEME.colors.text.tertiary,
     textAlign: 'center',
-    marginBottom: THEME.spacing.lg,
+    marginBottom: THEME.spacing.md,
+    fontWeight: '500',
+    letterSpacing: 0.3,
   },
-  pointsContainer: {
+  quickStats: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginTop: THEME.spacing.sm,
+    paddingVertical: THEME.spacing.sm,
+    paddingHorizontal: THEME.spacing.lg,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
-  pointsLabel: {
-    fontSize: THEME.fonts.sizes.sm,
-    color: THEME.colors.text.secondary,
+  statItem: {
+    alignItems: 'center',
+    paddingHorizontal: THEME.spacing.md,
   },
-  pointsValue: {
-    fontSize: THEME.fonts.sizes.xl,
-    fontWeight: 'bold',
+  statValue: {
+    fontSize: 22,
+    fontWeight: '800',
     color: THEME.colors.accent,
+    marginBottom: 3,
+    textShadowColor: 'rgba(252, 190, 37, 0.5)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
-  progressCard: {
-    // Card styling handled by GlassCard
-  },
-  progressLabel: {
-    fontSize: THEME.fonts.sizes.md,
+  statLabel: {
+    fontSize: 10,
+    color: THEME.colors.text.secondary,
     fontWeight: '600',
-    color: THEME.colors.text.primary,
-    textAlign: 'center',
-    marginBottom: THEME.spacing.md,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    opacity: 0.9,
   },
-  progressTrack: {
-    marginBottom: THEME.spacing.md,
+  statDivider: {
+    width: 1.5,
+    height: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderRadius: 1,
   },
-  progressBackground: {
+  progressSection: {
+    paddingVertical: THEME.spacing.md,
+  },
+  progressBarContainer: {
+    marginBottom: THEME.spacing.md,
+    paddingVertical: 16,
+    paddingHorizontal: 0,
+    justifyContent: 'center',
+    width: '100%',
+  },
+  progressBarTrack: {
+    width: '100%',
     height: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     borderRadius: 4,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-  progressFill: {
+  progressBarFill: {
     height: '100%',
     backgroundColor: THEME.colors.accent,
     borderRadius: 4,
+    shadowColor: THEME.colors.accent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  timeContainer: {
+  timeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: THEME.spacing.sm,
+    alignItems: 'center',
   },
   timeText: {
-    fontSize: THEME.fonts.sizes.sm,
+    fontSize: 13,
     color: THEME.colors.text.secondary,
-  },
-  progressPercentage: {
-    fontSize: THEME.fonts.sizes.lg,
-    fontWeight: 'bold',
-    color: THEME.colors.accent,
-    textAlign: 'center',
-  },
-  controlsCard: {
-    // Card styling handled by GlassCard
-  },
-  controlsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  controlButton: {
-    flex: 0.25,
-    marginHorizontal: THEME.spacing.xs,
-  },
-  mainControlButton: {
-    flex: 0.4,
-    marginHorizontal: THEME.spacing.xs,
-  },
-  errorText: {
-    color: '#FF6B6B',
-    fontSize: THEME.fonts.sizes.sm,
-    textAlign: 'center',
-    marginTop: THEME.spacing.md,
-  },
-  challengeCard: {
-    // Card styling handled by GlassCard
-  },
-  challengeLabel: {
-    fontSize: THEME.fonts.sizes.md,
     fontWeight: '600',
-    color: THEME.colors.text.primary,
-    textAlign: 'center',
-    marginBottom: THEME.spacing.md,
   },
-  challengeInfo: {
+  progressPercent: {
+    fontSize: 13,
+    color: THEME.colors.accent,
+    fontWeight: '800',
+  },
+  controlsSection: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: THEME.spacing.md,
+  },
+  secondaryButton: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    overflow: 'hidden',
+    marginHorizontal: THEME.spacing.xl,
+  },
+  secondaryButtonGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 34,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  secondaryButtonInner: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  challengeStatus: {
-    fontSize: THEME.fonts.sizes.lg,
-    fontWeight: 'bold',
-    marginBottom: THEME.spacing.xs,
+  skipIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 28,
+    height: 28,
   },
-  challengeProgress: {
-    fontSize: THEME.fonts.sizes.sm,
-    color: THEME.colors.text.secondary,
+  skipIconLeft: {
+    width: 0,
+    height: 0,
+    borderRightWidth: 9,
+    borderTopWidth: 6,
+    borderBottomWidth: 6,
+    borderRightColor: 'rgba(255, 255, 255, 0.9)',
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+    marginRight: 2,
+  },
+  skipIconLeftSecond: {
+    marginRight: 0,
+    marginLeft: -2,
+  },
+  skipIconRight: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 9,
+    borderTopWidth: 6,
+    borderBottomWidth: 6,
+    borderLeftColor: 'rgba(255, 255, 255, 0.9)',
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+    marginLeft: 2,
+  },
+  skipIconRightSecond: {
+    marginLeft: -2,
+  },
+  playButton: {
+    width: 92,
+    height: 92,
+    borderRadius: 46,
+    overflow: 'hidden',
+    marginHorizontal: THEME.spacing.lg,
+  },
+  playButtonGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 46,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  playButtonContent: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  playButtonIcon: {
+    fontSize: 36,
+    opacity: 0.9,
+  },
+  playIcon: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 14,
+    borderTopWidth: 10,
+    borderBottomWidth: 10,
+    borderLeftColor: THEME.colors.background,
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+    marginLeft: 3,
+  },
+  pauseIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 28,
+  },
+  pauseBar: {
+    width: 5,
+    height: 24,
+    backgroundColor: THEME.colors.background,
+    borderRadius: 2,
+    marginHorizontal: 2,
   },
 });

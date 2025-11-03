@@ -32,6 +32,8 @@ export interface UseMusicPlayerReturn {
   seekTo: (seconds: number) => void;
   loading: boolean;
   error: string | null;
+  isCompleted: boolean;
+  resetCompletion: () => void;
 }
 
 export interface UsePointsCounterReturn {
