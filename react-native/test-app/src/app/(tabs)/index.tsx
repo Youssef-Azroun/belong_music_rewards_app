@@ -15,13 +15,24 @@ export default function HomeScreen() {
   const challenges = useMusicStore(selectChallenges);
   const currentTrack = useMusicStore(selectCurrentTrack);
   const isPlaying = useMusicStore(selectIsPlaying);
-  const { play } = useMusicPlayer();
+  const { play, resume } = useMusicPlayer();
   const totalPoints = useUserStore((state) => state.totalPoints);
   const completedChallenges = useUserStore((state) => state.completedChallenges);
 
   const handlePlayChallenge = async (challenge: MusicChallenge) => {
     try {
-      await play(challenge);
+      // If this is the current track and it's playing, just navigate (don't restart)
+      if (currentTrack?.id === challenge.id && isPlaying) {
+        router.push('/(modals)/player');
+        return;
+      }
+      
+      // If this is the current track but paused, resume instead of restarting
+      if (currentTrack?.id === challenge.id && !isPlaying) {
+        await resume();
+      } else {
+        await play(challenge);
+      }
       // Navigate to player modal after starting playback
       router.push('/(modals)/player');
     } catch (error) {

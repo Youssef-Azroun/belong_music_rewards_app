@@ -25,6 +25,7 @@ export const useMusicPlayer = (): UseMusicPlayerReturn => {
   // Ref to track if points have been awarded for current track to prevent duplicates
   const pointsAwardedRef = useRef<string | null>(null);
   const completionTriggeredRef = useRef<string | null>(null);
+  const previousPlayingStateRef = useRef<boolean | null>(null);
   
   // Zustand store selectors for state synchronization
   const storeCurrentTrack = useMusicStore(selectCurrentTrack);
@@ -55,7 +56,7 @@ export const useMusicPlayer = (): UseMusicPlayerReturn => {
     }
   }, [storeCurrentTrack]);
 
-  // Track playback state changes
+  // Track playback state changes - Fixed infinite loop by using ref instead of dependency
   useEffect(() => {
     // Some versions of usePlaybackState may return an object, so extract value if needed
     let stateValue: any = playbackState;
@@ -63,10 +64,12 @@ export const useMusicPlayer = (): UseMusicPlayerReturn => {
       stateValue = playbackState.state;
     }
     const isCurrentlyPlaying = stateValue === State.Playing;
-    if (isCurrentlyPlaying !== isPlaying) {
+    // Only update if state actually changed (prevent infinite loop)
+    if (previousPlayingStateRef.current !== isCurrentlyPlaying) {
+      previousPlayingStateRef.current = isCurrentlyPlaying;
       setIsPlaying(isCurrentlyPlaying);
     }
-  }, [playbackState, isPlaying, setIsPlaying]);
+  }, [playbackState, setIsPlaying]);
 
   // Update position and calculate progress - Fixed to prevent duplicate point awards
   useEffect(() => {

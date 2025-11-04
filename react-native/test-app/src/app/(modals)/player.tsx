@@ -15,6 +15,7 @@ import { router } from 'expo-router';
 import { GlassCard } from '../../components/ui/GlassCard';
 import { GradientBackground } from '../../components/ui/GradientBackground';
 import { CompletionModal } from '../../components/ui/CompletionModal';
+import { AudioVisualizer } from '../../components/ui/AudioVisualizer';
 import { useMusicPlayer } from '../../hooks/useMusicPlayer';
 import { useUserStore } from '../../stores/userStore';
 import { THEME } from '../../constants/theme';
@@ -164,6 +165,18 @@ export default function PlayerModal() {
             </View>
             <Text style={styles.trackTitle}>{currentTrack.title}</Text>
             <Text style={styles.trackArtist}>{currentTrack.artist}</Text>
+            
+            {/* Audio Visualizer - Dancing bars */}
+            <View style={styles.visualizerContainer}>
+              <AudioVisualizer 
+                isPlaying={isPlaying}
+                barCount={24}
+                barWidth={4}
+                barSpacing={3}
+                maxBarHeight={50}
+                minBarHeight={6}
+              />
+            </View>
             
             {/* Quick Stats */}
             <View style={styles.quickStats}>
@@ -416,6 +429,11 @@ const styles = StyleSheet.create({
     marginBottom: THEME.spacing.md,
     fontWeight: '500',
     letterSpacing: 0.3,
+  },
+  visualizerContainer: {
+    width: '100%',
+    marginVertical: THEME.spacing.md,
+    paddingHorizontal: THEME.spacing.sm,
   },
   quickStats: {
     flexDirection: 'row',
