@@ -22,9 +22,28 @@ export const setupTrackPlayer = async (): Promise<void> => {
         Capability.SeekTo,
       ],
     });
-  } catch (error) {
-    console.error('TrackPlayer setup error:', error);
-    throw error;
+  } catch (error: any) {
+    // If player is already initialized, just update options
+    if (error?.message?.includes('already been initialized')) {
+      console.log('TrackPlayer already initialized, updating options...');
+      try {
+        await TrackPlayer.updateOptions({
+          capabilities: [
+            Capability.Play,
+            Capability.Pause,
+            Capability.SkipToNext,
+            Capability.SkipToPrevious,
+            Capability.SeekTo,
+          ],
+        });
+      } catch (updateError) {
+        console.error('TrackPlayer update options error:', updateError);
+        throw updateError;
+      }
+    } else {
+      console.error('TrackPlayer setup error:', error);
+      throw error;
+    }
   }
 };
 
