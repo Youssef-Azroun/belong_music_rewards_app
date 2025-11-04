@@ -28,8 +28,11 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
   const glowAnimation = useRef(new Animated.Value(0)).current;
   const shimmerAnimation = useRef(new Animated.Value(0)).current;
 
+  // Check if challenge is 100% completed
+  const isCompleted = challenge.completed || challenge.progress >= 100;
+
   useEffect(() => {
-    if (isCurrentTrack) {
+    if (isCompleted) {
       // Glow animation
       Animated.loop(
         Animated.sequence([
@@ -55,20 +58,21 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
         })
       ).start();
     } else {
-      // Reset animations when not current track
+      // Reset animations when not completed
       glowAnimation.setValue(0);
       shimmerAnimation.setValue(0);
     }
-  }, [isCurrentTrack]);
+  }, [isCompleted]);
 
   const glowOpacity = glowAnimation.interpolate({
     inputRange: [0, 1],
     outputRange: [0.4, 0.9],
   });
 
+  // Shimmer animation: travels from completely off-screen left to completely off-screen right
   const shimmerTranslateX = shimmerAnimation.interpolate({
     inputRange: [0, 1],
-    outputRange: [-200, 200],
+    outputRange: [-CARD_WIDTH - 100, CARD_WIDTH + 100],
   });
 
   const formatDuration = (seconds: number): string => {
@@ -103,21 +107,21 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
   return (
     <View style={styles.cardWrapper}>
       <GlassCard
-          key={`${challenge.id}-${isCurrentTrack}`}
+          key={`${challenge.id}-${isCompleted}`}
           style={StyleSheet.flatten([
             styles.card,
-            isCurrentTrack && styles.currentTrackCard,
+            isCompleted && styles.currentTrackCard,
             { opacity: 1 } // Explicitly ensure visibility
           ])}
           gradientColors={
-            isCurrentTrack
+            isCompleted
               ? ['rgba(252, 190, 37, 0.7)', 'rgba(117, 83, 219, 0.5)']
               : THEME.glass.gradientColors.card
           }
           borderRadius={THEME.borderRadius.lg}
         >
           {/* Animated glow effect for highlighted card - inside card */}
-          {isCurrentTrack && (
+          {isCompleted && (
             <Animated.View
               style={[
                 styles.glowContainer,
@@ -141,7 +145,7 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
           )}
 
           {/* Corner decorations for game-like UI - inside card */}
-          {isCurrentTrack && (
+          {isCompleted && (
             <>
               <View style={[styles.cornerDecoration, styles.topLeft]} />
               <View style={[styles.cornerDecoration, styles.topRight]} />
@@ -151,7 +155,7 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
           )}
 
           {/* Shimmer effect overlay */}
-          {isCurrentTrack && (
+          {isCompleted && (
             <Animated.View
               style={[
                 styles.shimmerOverlay,
@@ -184,7 +188,7 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
               <View style={styles.titleSection}>
                 <Text style={[
                   styles.title,
-                  isCurrentTrack && styles.activeTitle
+                  isCompleted && styles.activeTitle
                 ]}>
                   {challenge.title}
                 </Text>
@@ -234,21 +238,22 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
               </View>
             </View>
 
-            {/* Game-style Progress Bar */}
-            {challenge.progress > 0 && (
-              <View style={styles.gameProgressContainer}>
-                <View style={styles.gameProgressTrack}>
-                  <View
-                    style={StyleSheet.flatten([
-                      styles.gameProgressFill,
-                      { width: `${challenge.progress}%` }
-                    ])}
-                  />
-                  <View style={styles.progressGlow} />
-                </View>
-                <Text style={styles.progressText}>{Math.round(challenge.progress)}% COMPLETE</Text>
+            {/* Star Rating System */}
+            <View style={styles.starRatingContainer}>
+              <View style={styles.starsRow}>
+                {[0, 1, 2, 3, 4].map((index) => {
+                  const filledStars = Math.floor(challenge.progress / 20);
+                  const isFilled = index < filledStars;
+                  return (
+                    <View key={index} style={styles.starWrapper}>
+                      <Text style={[styles.star, isFilled && styles.starFilled]}>
+                        {isFilled ? '⭐' : '☆'}
+                      </Text>
+                    </View>
+                  );
+                })}
               </View>
-            )}
+            </View>
           </TouchableOpacity>
 
           {/* Play Button */}
@@ -256,7 +261,7 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
             <GlassButton
               title={getButtonTitle()}
               onPress={() => onPlay(challenge)}
-              variant={isCurrentTrack ? 'primary' : 'secondary'}
+              variant={isCompleted ? 'primary' : 'secondary'}
               disabled={challenge.completed}
               style={styles.playButton}
             />
@@ -343,8 +348,8 @@ const styles = StyleSheet.create({
   shimmerOverlay: {
     position: 'absolute',
     top: 0,
-    left: -100,
-    width: 100,
+    left: 0,
+    width: 150, // Width of the shimmer effect
     bottom: 0,
     borderRadius: THEME.borderRadius.lg,
     zIndex: 1,
@@ -368,7 +373,7 @@ const styles = StyleSheet.create({
     marginRight: THEME.spacing.md,
   },
   title: {
-    fontSize: THEME.fonts.sizes.xxl,
+    fontSize: THEME.fonts.sizes.xl,
     fontWeight: '900',
     color: THEME.colors.text.primary,
     marginBottom: THEME.spacing.xs,
@@ -384,7 +389,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 10,
   },
   artist: {
-    fontSize: THEME.fonts.sizes.md,
+    fontSize: THEME.fonts.sizes.sm,
     color: THEME.colors.text.secondary,
     fontWeight: '600',
     letterSpacing: 0.5,
@@ -404,15 +409,15 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   difficultyText: {
-    fontSize: THEME.fonts.sizes.xs,
+    fontSize: 11,
     fontWeight: '900',
     color: THEME.colors.background,
     letterSpacing: 2,
   },
   description: {
-    fontSize: THEME.fonts.sizes.sm,
+    fontSize: 13,
     color: THEME.colors.text.secondary,
-    lineHeight: 22,
+    lineHeight: 20,
     marginBottom: THEME.spacing.lg,
   },
   gameStatsGrid: {
@@ -449,7 +454,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   gameStatValue: {
-    fontSize: THEME.fonts.sizes.lg,
+    fontSize: THEME.fonts.sizes.md,
     fontWeight: '900',
     color: THEME.colors.text.primary,
     marginBottom: THEME.spacing.xs / 2,
@@ -464,51 +469,37 @@ const styles = StyleSheet.create({
     textShadowRadius: 5,
   },
   gameStatLabel: {
-    fontSize: THEME.fonts.sizes.xs,
+    fontSize: 11,
     color: THEME.colors.text.secondary,
     textTransform: 'uppercase',
     letterSpacing: 1.5,
     fontWeight: '700',
   },
-  gameProgressContainer: {
+  starRatingContainer: {
     marginBottom: THEME.spacing.md,
+    alignItems: 'center',
   },
-  gameProgressTrack: {
-    height: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: 5,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    position: 'relative',
+  starsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  gameProgressFill: {
-    height: '100%',
-    backgroundColor: THEME.colors.accent,
-    borderRadius: 3,
-    shadowColor: THEME.colors.accent,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 10,
-    elevation: 5,
+  starWrapper: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: THEME.spacing.xs / 2,
   },
-  progressGlow: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(252, 190, 37, 0.3)',
-    borderRadius: 3,
+  star: {
+    fontSize: 28,
+    color: 'rgba(255, 255, 255, 0.3)',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
-  progressText: {
-    fontSize: THEME.fonts.sizes.xs,
+  starFilled: {
     color: THEME.colors.accent,
-    fontWeight: '700',
-    letterSpacing: 1,
-    marginTop: THEME.spacing.xs,
-    textAlign: 'center',
-    textTransform: 'uppercase',
+    textShadowColor: 'rgba(252, 190, 37, 0.8)',
+    textShadowRadius: 4,
   },
   buttonContainer: {
     marginTop: THEME.spacing.xs,
